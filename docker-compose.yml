@@ -24,6 +24,7 @@ services:
       DB_PASSWORD: mypassword
       GITHUB_API_URL: https://api.github.com
       GITHUB_TOKEN: ${GITHUB_TOKEN}
+      GITHUB_USER: ${GITHUB_USER}
     networks:
       - appnet
 
