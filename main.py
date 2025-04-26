@@ -1,16 +1,18 @@
+from http.client import HTTPException
 import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from pydantic import BaseModel
 import psycopg2
+import requests
 
 app = FastAPI()
 
 # CORS config
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://react.local:30807"],
+    allow_origins=["*"],
  # ⚠️ Para desarrollo. En producción define el dominio exacto.
     allow_credentials=True,
     allow_methods=["*"],
@@ -22,28 +24,12 @@ DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "mydatabase")
 DB_USER = os.getenv("DB_USER", "myuser")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "mypassword")
-
-# Modelo de producto
-class Product(BaseModel):
-    id: int
-    name: str
-    price: float
-
-# Lista de productos de ejemplo
-products = [
-    {"id": 1, "name": "Laptop", "price": 999.99},
-    {"id": 2, "name": "Smartphone", "price": 499.99},
-    {"id": 3, "name": "Headphones", "price": 99.99},
-    {"id": 4, "name": "Tablet", "price": 299.99},
-]
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
+GITHUB_API_URL = os.getenv("GITHUB_API_URL", "https://api.github.com")
 
 @app.get("/")
 def read_root():
     return {"message": "Bienvenido a la API de productos"}
-
-@app.get("/products", response_model=List[Product])
-def get_products():
-    return products
 
 @app.get("/db-check")
 def db_check():
@@ -60,3 +46,34 @@ def db_check():
         return {"status": "success", "message": "Connected to the database!"}
     except Exception as e:
         return {"status": "error", "message": str(e)}
+    
+
+class RepoCreateRequest(BaseModel):
+    name: str
+    description: str = ""
+    private: bool = True
+
+@app.post("/create-repo")
+def create_repo(repo: RepoCreateRequest):
+    if not GITHUB_TOKEN:
+        raise HTTPException(status_code=500, detail="GitHub token not configured.")
+
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json"
+    }
+
+    payload = {
+        "name": repo.name,
+        "description": repo.description,
+        "private": repo.private,
+        "auto_init": True  # Crear el repo con un README inicial
+    }
+
+    response = requests.post(f"{GITHUB_API_URL}/user/repos", headers=headers, json=payload)
+
+    if response.status_code == 201:
+        return {"status": "success", "message": f"Repository '{repo.name}' created successfully."}
+    else:
+        return {"status": "error", "message": response.json()}
+    
