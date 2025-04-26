@@ -1,5 +1,6 @@
 from http.client import HTTPException
 import os
+import subprocess
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
@@ -26,7 +27,7 @@ DB_USER = os.getenv("DB_USER", "myuser")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "mypassword")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 GITHUB_API_URL = os.getenv("GITHUB_API_URL", "https://api.github.com")
-
+GITHUB_USER = os.getenv("GITHUB_USER", "myusername")
 @app.get("/")
 def read_root():
     return {"message": "Bienvenido a la API de productos"}
@@ -76,4 +77,39 @@ def create_repo(repo: RepoCreateRequest):
         return {"status": "success", "message": f"Repository '{repo.name}' created successfully."}
     else:
         return {"status": "error", "message": response.json()}
+
+class RepoDeleteRequest(BaseModel):
+    name: str  # Nombre del repositorio a eliminar
+
+@app.delete("/delete-repo")
+def delete_repo(repo: RepoDeleteRequest):
+    print("Starting delete_repo endpoint")
+
+    if not GITHUB_TOKEN:
+        print("Error: GitHub token not configured")
+        raise HTTPException(status_code=500, detail="GitHub token not configured.")
     
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json"
+    }
+    print(f"Headers prepared: {headers}")
+
+    url = f"{GITHUB_API_URL}/repos/{GITHUB_USER}/{repo.name}"
+    print(f"Request URL: {url}")
+
+    response = requests.delete(url, headers=headers)
+    print(f"GitHub response status code: {response.status_code}")
+
+    if response.status_code == 204:
+        print(f"Repository '{repo.name}' deleted successfully.")
+        return {"status": "success", "message": f"Repository '{repo.name}' deleted successfully."}
+    else:
+        try:
+            error_message = response.json()
+            print(f"Error deleting repository: {error_message}")
+        except Exception as e:
+            error_message = {"message": str(e)}
+            print(f"Error parsing error response: {e}")
+        
+        return {"status": "error", "message": error_message}
