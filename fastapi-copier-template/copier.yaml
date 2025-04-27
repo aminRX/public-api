@@ -1,0 +1,25 @@
+project_slug:
+  type: str
+  help: What is your project name?
+
+description:
+  type: str
+  help: Short description of your project
+
+databases:
+  type: yaml
+  multiselect: true
+  choices:
+    postgresql:
+      value: postgresql
+    mongodb:
+      value: mongodb
+    redis:
+      value: redis
+  help: Which databases will your project use?
+  default: []
+
+port:
+  type: int
+  help: Which port should your FastAPI app run on?
+  default: 8000

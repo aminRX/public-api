@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: my-postgres
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_DB: mydatabase
+    networks:
+      - appnet
+
+  public-api:
+    image: aminrx/public-api:latest
+    container_name: public-api
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: my-postgres
+      DB_PORT: 5432
+      DB_NAME: mydatabase
+      DB_USER: myuser
+      DB_PASSWORD: mypassword
+      GITHUB_API_URL: https://api.github.com
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      GITHUB_USER: ${GITHUB_USER}
+    networks:
+      - appnet
+
+networks:
+  appnet:
+    driver: bridge

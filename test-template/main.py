@@ -80,13 +80,6 @@ def create_repo(repo: RepoCreateRequest):
 
 class RepoDeleteRequest(BaseModel):
     name: str  # Nombre del repositorio a eliminar
-class ProjectGenerateRequest(BaseModel):
-    repo_url: str
-    project_slug: str
-    description: str
-    databases: List[str]
-    port: int = 8000
-
 
 @app.delete("/delete-repo")
 def delete_repo(repo: RepoDeleteRequest):
@@ -120,41 +113,3 @@ def delete_repo(repo: RepoDeleteRequest):
             print(f"Error parsing error response: {e}")
         
         return {"status": "error", "message": error_message}
-
-
-@app.post("/generate-project")
-def generate_project(request: ProjectGenerateRequest):
-    try:
-        # Crear una carpeta temporal para generar el proyecto
-        temp_dir = tempfile.mkdtemp()
-        project_path = os.path.join(temp_dir, request.project_slug)
-
-        # Ejecutar copier para copiar el template dinámicamente
-        run_copy(
-            src_path="./fastapi-copier-template",  # Ruta a tu template
-            dst_path=project_path,
-            data={
-                "project_slug": request.project_slug,
-                "description": request.description,
-                "databases": request.databases,
-                "port": request.port
-            },
-            unsafe=True  # Permitir copiar desde carpeta local no git
-        )
-
-        # Inicializar Git
-        subprocess.run(["git", "init"], cwd=project_path, check=True)
-        subprocess.run(["git", "remote", "add", "origin", request.repo_url], cwd=project_path, check=True)
-        subprocess.run(["git", "add", "."], cwd=project_path, check=True)
-        subprocess.run(["git", "commit", "-m", "Initial commit from template"], cwd=project_path, check=True)
-        subprocess.run(["git", "branch", "-M", "main"], cwd=project_path, check=True)
-        subprocess.run(["git", "push", "-u", "origin", "main"], cwd=project_path, check=True)
-
-        return {"status": "success", "message": f"Project '{request.project_slug}' generated and pushed!"}
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-    finally:
-        # Siempre borrar la carpeta temporal después
-        shutil.rmtree(temp_dir, ignore_errors=True)

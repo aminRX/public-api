@@ -1,0 +1,12 @@
+fastapi
+uvicorn
+{% if "postgresql" in databases %}
+sqlalchemy
+psycopg2-binary
+{% endif %}
+{% if "mongodb" in databases %}
+motor
+{% endif %}
+{% if "redis" in databases %}
+redis
+{% endif %}
